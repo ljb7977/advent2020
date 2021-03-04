@@ -1,7 +1,7 @@
 (ns advent2020.day8
   (:require [clojure.string :as str]
+            [clojure.core.match :refer [match]]
             [util]))
-(require '[clojure.core.match :refer [match]])
 
 (def input-val (util/read-input "day8.txt"))
 
@@ -12,38 +12,34 @@
 (defn parse [input-list]
   (vec (map parse-one-line input-list)))
 
-
-(defn get-next-state [state]
-  (let [{:keys [inst-history-set value inst-idx instructions]} state
-        [instruction argument] (get instructions inst-idx)]
-    (match [instruction]
-           [:nop] {:inst-history-set (conj inst-history-set inst-idx)
-                   :value value
-                   :inst-idx (inc inst-idx)
-                   :instructions instructions}
-           [:acc] {:inst-history-set (conj inst-history-set inst-idx)
-                   :value (+ value argument)
-                   :inst-idx (inc inst-idx)
-                   :instructions instructions}
-           [:jmp] {:inst-history-set (conj inst-history-set inst-idx)
-                   :value value
-                   :inst-idx (+ argument inst-idx)
-                   :instructions instructions})
-    ))
-
 (defn continue? [{:keys [inst-history-set inst-idx]}]
   (not (contains? inst-history-set inst-idx)))
 
-(defn get-initial-state [instructions]
+(defn make-next-state-fn [instructions]
+  (fn [state]
+    (let [{:keys [inst-history-set value inst-idx]} state
+          [instruction argument] (get instructions inst-idx)]
+      (match [instruction]
+             [:nop] {:inst-history-set (conj inst-history-set inst-idx)
+                     :value value
+                     :inst-idx (inc inst-idx)}
+             [:acc] {:inst-history-set (conj inst-history-set inst-idx)
+                     :value (+ value argument)
+                     :inst-idx (inc inst-idx)}
+             [:jmp] {:inst-history-set (conj inst-history-set inst-idx)
+                     :value value
+                     :inst-idx (+ argument inst-idx)}))))
+
+(def initial-state
   {:inst-history-set #{}
    :value 0
-   :inst-idx 0
-   :instructions instructions})
+   :inst-idx 0})
 
-(get (->> input-val
-     (parse)
-     (get-initial-state)
-     (iterate get-next-state)
+(def next-state-fn
+  (->> input-val parse make-next-state-fn))
+
+(->> initial-state
+     (iterate next-state-fn)
      (drop-while continue?)
-     first)
+     first
      :value)
