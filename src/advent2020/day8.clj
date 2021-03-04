@@ -18,17 +18,12 @@
 (defn make-next-state-fn [instructions]
   (fn [state]
     (let [{:keys [inst-history-set value inst-idx]} state
-          [instruction argument] (get instructions inst-idx)]
+          [instruction argument] (get instructions inst-idx)
+          state' {:inst-history-set (conj inst-history-set inst-idx)}]
       (match [instruction]
-             [:nop] {:inst-history-set (conj inst-history-set inst-idx)
-                     :value value
-                     :inst-idx (inc inst-idx)}
-             [:acc] {:inst-history-set (conj inst-history-set inst-idx)
-                     :value (+ value argument)
-                     :inst-idx (inc inst-idx)}
-             [:jmp] {:inst-history-set (conj inst-history-set inst-idx)
-                     :value value
-                     :inst-idx (+ argument inst-idx)}))))
+             [:nop] (assoc state', :value value, :inst-idx (inc inst-idx))
+             [:acc] (assoc state', :value (+ value argument), :inst-idx (inc inst-idx))
+             [:jmp] (assoc state', :value value, :inst-idx (+ argument inst-idx))))))
 
 (def initial-state
   {:inst-history-set #{}
