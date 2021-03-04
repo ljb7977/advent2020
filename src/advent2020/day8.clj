@@ -12,15 +12,38 @@
 (defn parse [input-list]
   (vec (map parse-one-line input-list)))
 
-(defn solve [instructions]
-  (loop [inst-history-set #{}, value 0, inst-idx 0]
-    (if (contains? inst-history-set inst-idx)
-      value
-      (let [[instruction argument] (get instructions inst-idx)]
-          (match [instruction]
-                 [:nop] (recur (conj inst-history-set inst-idx) value (inc inst-idx))
-                 [:acc] (recur (conj inst-history-set inst-idx) (+ value argument) (inc inst-idx))
-                 [:jmp] (recur (conj inst-history-set inst-idx) value (+ argument inst-idx)))
-          ))))
 
-(->> input-val parse solve)
+(defn get-next-state [state]
+  (let [{:keys [inst-history-set value inst-idx instructions]} state
+        [instruction argument] (get instructions inst-idx)]
+    (match [instruction]
+           [:nop] {:inst-history-set (conj inst-history-set inst-idx)
+                   :value value
+                   :inst-idx (inc inst-idx)
+                   :instructions instructions}
+           [:acc] {:inst-history-set (conj inst-history-set inst-idx)
+                   :value (+ value argument)
+                   :inst-idx (inc inst-idx)
+                   :instructions instructions}
+           [:jmp] {:inst-history-set (conj inst-history-set inst-idx)
+                   :value value
+                   :inst-idx (+ argument inst-idx)
+                   :instructions instructions})
+    ))
+
+(defn continue? [{:keys [inst-history-set inst-idx]}]
+  (not (contains? inst-history-set inst-idx)))
+
+(defn get-initial-state [instructions]
+  {:inst-history-set #{}
+   :value 0
+   :inst-idx 0
+   :instructions instructions})
+
+(get (->> input-val
+     (parse)
+     (get-initial-state)
+     (iterate get-next-state)
+     (drop-while continue?)
+     first)
+     :value)
